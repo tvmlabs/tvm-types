@@ -1,6 +1,9 @@
-use criterion::{black_box, criterion_main, criterion_group, Criterion};
-use pprof::criterion::{PProfProfiler, Output};
-use ton_types::{BuilderData, Cell, GasConsumer, HashmapE, Result, SliceData, Status, error, fail, read_single_root_boc};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use pprof::criterion::{Output, PProfProfiler};
+use tvm_types::{
+    error, fail, read_single_root_boc, BuilderData, Cell, GasConsumer, HashmapE, Result, SliceData,
+    Status,
+};
 
 fn read_boc(filename: &str) -> Vec<u8> {
     let mut bytes = Vec::new();
@@ -11,29 +14,54 @@ fn read_boc(filename: &str) -> Vec<u8> {
 
 fn bench_boc_read(c: &mut Criterion) {
     let bytes = read_boc("src/tests/data/medium.boc");
-    c.bench_function("boc-read", |b| b.iter( || {
-        black_box(ton_types::read_single_root_boc(bytes.clone()).unwrap());
-    }));
+    c.bench_function("boc-read", |b| {
+        b.iter(|| {
+            black_box(tvm_types::read_single_root_boc(bytes.clone()).unwrap());
+        })
+    });
 }
 
 fn bench_boc_write(c: &mut Criterion) {
     let bytes = read_boc("src/tests/data/medium.boc");
-    let cell = ton_types::read_single_root_boc(bytes).unwrap();
+    let cell = tvm_types::read_single_root_boc(bytes).unwrap();
     let mut g = c.benchmark_group("bench");
     g.measurement_time(std::time::Duration::new(15, 0));
-    g.bench_function("boc-write", |b| b.iter( || {
-        black_box(ton_types::write_boc(&cell).unwrap());
-    }));
+    g.bench_function("boc-write", |b| {
+        b.iter(|| {
+            black_box(tvm_types::write_boc(&cell).unwrap());
+        })
+    });
 }
 
 enum OperationType {
-    New { bits: usize, cell: Option<Cell> },
-    Get { key: SliceData },
-    Set { key: SliceData, value: SliceData },
-    SetBuilder { key: SliceData, value: BuilderData },
-    Remove { key: SliceData },
-    GetMinMax { min: bool, signed: bool },
-    FindLeaf { key: SliceData, next: bool, eq: bool, signed: bool },
+    New {
+        bits: usize,
+        cell: Option<Cell>,
+    },
+    Get {
+        key: SliceData,
+    },
+    Set {
+        key: SliceData,
+        value: SliceData,
+    },
+    SetBuilder {
+        key: SliceData,
+        value: BuilderData,
+    },
+    Remove {
+        key: SliceData,
+    },
+    GetMinMax {
+        min: bool,
+        signed: bool,
+    },
+    FindLeaf {
+        key: SliceData,
+        next: bool,
+        eq: bool,
+        signed: bool,
+    },
 }
 
 struct Operation {
@@ -54,7 +82,10 @@ struct Plan {
 
 impl Plan {
     fn new() -> Self {
-        Self { ops: Vec::new(), max_id: 0 }
+        Self {
+            ops: Vec::new(),
+            max_id: 0,
+        }
     }
     fn push(&mut self, op: Operation) {
         self.max_id = std::cmp::max(self.max_id, op.id);
@@ -75,33 +106,33 @@ fn load_plan(filename: &str) -> Result<Plan> {
         let typ = match fields[1] {
             "with_hashmap" => New {
                 bits: fields[2].parse::<usize>()?,
-                cell: (fields.len() == 4).then(|| r(fields[3]))
+                cell: (fields.len() == 4).then(|| r(fields[3])),
             },
             "set_with_gas" => Set {
                 key: SliceData::load_cell(r(fields[2]))?,
-                value: SliceData::load_cell(r(fields[3]))?
+                value: SliceData::load_cell(r(fields[3]))?,
             },
             "set_builder_with_gas" => SetBuilder {
                 key: SliceData::load_cell(r(fields[2]))?,
-                value: BuilderData::from_cell(&r(fields[3]))?
+                value: BuilderData::from_cell(&r(fields[3]))?,
             },
             "get_with_gas" => Get {
-                key: SliceData::load_cell(r(fields[2]))?
+                key: SliceData::load_cell(r(fields[2]))?,
             },
             "remove_with_gas" => Remove {
-                key: SliceData::load_cell(r(fields[2]))?
+                key: SliceData::load_cell(r(fields[2]))?,
             },
             "get_min_max" => GetMinMax {
                 min: fields[2].parse::<bool>()?,
-                signed: fields[3].parse::<bool>()?
+                signed: fields[3].parse::<bool>()?,
             },
             "find_leaf" => FindLeaf {
                 key: SliceData::load_cell(r(fields[2]))?,
                 next: fields[3].parse::<bool>()?,
                 eq: fields[4].parse::<bool>()?,
-                signed: fields[5].parse::<bool>()?
+                signed: fields[5].parse::<bool>()?,
             },
-            op => fail!("unknown operation {} at line {}", op, lineno + 1)
+            op => fail!("unknown operation {} at line {}", op, lineno + 1),
         };
         plan.push(Operation::new(id, typ));
     }
@@ -110,9 +141,11 @@ fn load_plan(filename: &str) -> Result<Plan> {
 
 fn execute_plan(plan: &Plan) -> Status {
     let mut gas_consumer = TrivialGasConsumer {};
-    let mut hashmaps = vec!(HashmapE::with_bit_len(0); plan.max_id + 1);
+    let mut hashmaps = vec![HashmapE::with_bit_len(0); plan.max_id + 1];
     for op in &plan.ops {
-        let hashmap = hashmaps.get_mut(op.id).ok_or(error!("invalid hashmap id"))?;
+        let hashmap = hashmaps
+            .get_mut(op.id)
+            .ok_or(error!("invalid hashmap id"))?;
         use OperationType::*;
         match &op.typ {
             New { bits, cell } => {
@@ -133,7 +166,12 @@ fn execute_plan(plan: &Plan) -> Status {
             GetMinMax { min, signed } => {
                 hashmap.get_min_max(*min, *signed, &mut gas_consumer)?;
             }
-            FindLeaf { key, next, eq, signed } => {
+            FindLeaf {
+                key,
+                next,
+                eq,
+                signed,
+            } => {
                 hashmap.find_leaf(key.clone(), *next, *eq, *signed, &mut gas_consumer)?;
             }
         }
@@ -158,9 +196,7 @@ impl GasConsumer for TrivialGasConsumer {
 
 fn bench_hashmap(c: &mut Criterion) {
     let plan = load_plan("benches/hashmap-plan.txt").unwrap();
-    c.bench_function("hashmap", |b| b.iter( || {
-        execute_plan(&plan).unwrap()
-    }));
+    c.bench_function("hashmap", |b| b.iter(|| execute_plan(&plan).unwrap()));
 }
 
 criterion_group!(
