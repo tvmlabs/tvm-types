@@ -33,8 +33,6 @@ pub use self::wrappers::*;
 pub mod bls;
 pub use bls::*;
 
-include!("../common/src/info.rs");
-
 pub trait Mask {
     fn bit(&self, bits: Self) -> bool;
     fn mask(&self, mask: Self) -> Self;
@@ -82,21 +80,23 @@ pub fn parse_slice_base(slice: &str, mut bits: usize, base: u32) -> Option<Small
     let mut completion_tag = false;
     for ch in slice.chars() {
         if completion_tag {
-            return None
+            return None;
         }
         match ch.to_digit(base) {
-            Some(x) => if bits < 4 {
-                acc |= (x << (4 - bits)) as u8;
-                bits += 4;
-            } else {
-                data.push(acc | (x as u8 >> (bits - 4)));
-                acc = (x << (12 - bits)) as u8;
-                bits -= 4;
+            Some(x) => {
+                if bits < 4 {
+                    acc |= (x << (4 - bits)) as u8;
+                    bits += 4;
+                } else {
+                    data.push(acc | (x as u8 >> (bits - 4)));
+                    acc = (x << (12 - bits)) as u8;
+                    bits -= 4;
+                }
             }
             None => match ch {
                 '_' => completion_tag = true,
-                _ => return None
-            }
+                _ => return None,
+            },
         }
     }
     if bits != 0 {

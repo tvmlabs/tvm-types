@@ -1,37 +1,37 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 use tvm_types::{
     error, fail, read_single_root_boc, BuilderData, Cell, GasConsumer, HashmapE, Result, SliceData,
     Status,
 };
 
-fn read_boc(filename: &str) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    let mut file = std::fs::File::open(filename).unwrap();
-    std::io::Read::read_to_end(&mut file, &mut bytes).unwrap();
-    bytes
-}
+// fn read_boc(filename: &str) -> Vec<u8> {
+//     let mut bytes = Vec::new();
+//     let mut file = std::fs::File::open(filename).unwrap();
+//     std::io::Read::read_to_end(&mut file, &mut bytes).unwrap();
+//     bytes
+// }
 
-fn bench_boc_read(c: &mut Criterion) {
-    let bytes = read_boc("src/tests/data/medium.boc");
-    c.bench_function("boc-read", |b| {
-        b.iter(|| {
-            black_box(tvm_types::read_single_root_boc(bytes.clone()).unwrap());
-        })
-    });
-}
+// fn bench_boc_read(c: &mut Criterion) {
+//     let bytes = read_boc("src/tests/data/medium.boc");
+//     c.bench_function("boc-read", |b| {
+//         b.iter(|| {
+//             black_box(tvm_types::read_single_root_boc(bytes.clone()).unwrap());
+//         })
+//     });
+// }
 
-fn bench_boc_write(c: &mut Criterion) {
-    let bytes = read_boc("src/tests/data/medium.boc");
-    let cell = tvm_types::read_single_root_boc(bytes).unwrap();
-    let mut g = c.benchmark_group("bench");
-    g.measurement_time(std::time::Duration::new(15, 0));
-    g.bench_function("boc-write", |b| {
-        b.iter(|| {
-            black_box(tvm_types::write_boc(&cell).unwrap());
-        })
-    });
-}
+// fn bench_boc_write(c: &mut Criterion) {
+//     let bytes = read_boc("src/tests/data/medium.boc");
+//     let cell = tvm_types::read_single_root_boc(bytes).unwrap();
+//     let mut g = c.benchmark_group("bench");
+//     g.measurement_time(std::time::Duration::new(15, 0));
+//     g.bench_function("boc-write", |b| {
+//         b.iter(|| {
+//             black_box(tvm_types::write_boc(&cell).unwrap());
+//         })
+//     });
+// }
 
 enum OperationType {
     New {
@@ -203,8 +203,8 @@ criterion_group!(
     name = benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
     targets =
-        bench_boc_read,
-        bench_boc_write,
+        // bench_boc_read,
+        // bench_boc_write,
         bench_hashmap,
 );
 criterion_main!(benches);

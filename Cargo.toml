@@ -1,8 +1,7 @@
 [package]
-build = 'common/build/build.rs'
 edition = '2021'
 name = 'tvm_types'
-version = '2.0.31'
+version = '3.0.0'
 
 [dependencies]
 aes-ctr = '0.6'
@@ -26,6 +25,10 @@ ed25519-dalek = { features = [ 'hazmat', 'rand_core' ], version = '2.0' }
 lockfree = { git = 'https://github.com/tvmlabs/lockfree.git' }
 serde = { features = [ 'derive', 'rc' ], version = '1.0.105' }
 smallvec = { features = [ 'const_new', 'union', 'write' ], version = '1.10' }
+
+[dev-dependencies]
+criterion = "0.5"
+pprof = { version = "0.13", features = [ "criterion", "flamegraph" ] }
 
 [features]
 export_key = [  ]
