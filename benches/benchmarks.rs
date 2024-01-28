@@ -1,9 +1,18 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-use pprof::criterion::{Output, PProfProfiler};
-use tvm_types::{
-    error, fail, read_single_root_boc, BuilderData, Cell, GasConsumer, HashmapE, Result, SliceData,
-    Status,
-};
+use criterion::criterion_group;
+use criterion::criterion_main;
+use criterion::Criterion;
+use pprof::criterion::Output;
+use pprof::criterion::PProfProfiler;
+use tvm_types::error;
+use tvm_types::fail;
+use tvm_types::read_single_root_boc;
+use tvm_types::BuilderData;
+use tvm_types::Cell;
+use tvm_types::GasConsumer;
+use tvm_types::HashmapE;
+use tvm_types::Result;
+use tvm_types::SliceData;
+use tvm_types::Status;
 
 // fn read_boc(filename: &str) -> Vec<u8> {
 //     let mut bytes = Vec::new();
@@ -16,7 +25,8 @@ use tvm_types::{
 //     let bytes = read_boc("src/tests/data/medium.boc");
 //     c.bench_function("boc-read", |b| {
 //         b.iter(|| {
-//             black_box(tvm_types::read_single_root_boc(bytes.clone()).unwrap());
+//
+// black_box(tvm_types::read_single_root_boc(bytes.clone()).unwrap());
 //         })
 //     });
 // }
@@ -34,34 +44,13 @@ use tvm_types::{
 // }
 
 enum OperationType {
-    New {
-        bits: usize,
-        cell: Option<Cell>,
-    },
-    Get {
-        key: SliceData,
-    },
-    Set {
-        key: SliceData,
-        value: SliceData,
-    },
-    SetBuilder {
-        key: SliceData,
-        value: BuilderData,
-    },
-    Remove {
-        key: SliceData,
-    },
-    GetMinMax {
-        min: bool,
-        signed: bool,
-    },
-    FindLeaf {
-        key: SliceData,
-        next: bool,
-        eq: bool,
-        signed: bool,
-    },
+    New { bits: usize, cell: Option<Cell> },
+    Get { key: SliceData },
+    Set { key: SliceData, value: SliceData },
+    SetBuilder { key: SliceData, value: BuilderData },
+    Remove { key: SliceData },
+    GetMinMax { min: bool, signed: bool },
+    FindLeaf { key: SliceData, next: bool, eq: bool, signed: bool },
 }
 
 struct Operation {
@@ -82,11 +71,9 @@ struct Plan {
 
 impl Plan {
     fn new() -> Self {
-        Self {
-            ops: Vec::new(),
-            max_id: 0,
-        }
+        Self { ops: Vec::new(), max_id: 0 }
     }
+
     fn push(&mut self, op: Operation) {
         self.max_id = std::cmp::max(self.max_id, op.id);
         self.ops.push(op);
@@ -116,16 +103,11 @@ fn load_plan(filename: &str) -> Result<Plan> {
                 key: SliceData::load_cell(r(fields[2]))?,
                 value: BuilderData::from_cell(&r(fields[3]))?,
             },
-            "get_with_gas" => Get {
-                key: SliceData::load_cell(r(fields[2]))?,
-            },
-            "remove_with_gas" => Remove {
-                key: SliceData::load_cell(r(fields[2]))?,
-            },
-            "get_min_max" => GetMinMax {
-                min: fields[2].parse::<bool>()?,
-                signed: fields[3].parse::<bool>()?,
-            },
+            "get_with_gas" => Get { key: SliceData::load_cell(r(fields[2]))? },
+            "remove_with_gas" => Remove { key: SliceData::load_cell(r(fields[2]))? },
+            "get_min_max" => {
+                GetMinMax { min: fields[2].parse::<bool>()?, signed: fields[3].parse::<bool>()? }
+            }
             "find_leaf" => FindLeaf {
                 key: SliceData::load_cell(r(fields[2]))?,
                 next: fields[3].parse::<bool>()?,
@@ -143,9 +125,7 @@ fn execute_plan(plan: &Plan) -> Status {
     let mut gas_consumer = TrivialGasConsumer {};
     let mut hashmaps = vec![HashmapE::with_bit_len(0); plan.max_id + 1];
     for op in &plan.ops {
-        let hashmap = hashmaps
-            .get_mut(op.id)
-            .ok_or(error!("invalid hashmap id"))?;
+        let hashmap = hashmaps.get_mut(op.id).ok_or(error!("invalid hashmap id"))?;
         use OperationType::*;
         match &op.typ {
             New { bits, cell } => {
@@ -166,12 +146,7 @@ fn execute_plan(plan: &Plan) -> Status {
             GetMinMax { min, signed } => {
                 hashmap.get_min_max(*min, *signed, &mut gas_consumer)?;
             }
-            FindLeaf {
-                key,
-                next,
-                eq,
-                signed,
-            } => {
+            FindLeaf { key, next, eq, signed } => {
                 hashmap.find_leaf(key.clone(), *next, *eq, *signed, &mut gas_consumer)?;
             }
         }
@@ -185,9 +160,11 @@ impl GasConsumer for TrivialGasConsumer {
     fn finalize_cell(&mut self, builder: BuilderData) -> Result<Cell> {
         builder.finalize(1024)
     }
+
     fn load_cell(&mut self, cell: Cell) -> Result<SliceData> {
         SliceData::load_cell(cell)
     }
+
     fn finalize_cell_and_load(&mut self, builder: BuilderData) -> Result<SliceData> {
         let cell = self.finalize_cell(builder)?;
         self.load_cell(cell)

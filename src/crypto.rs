@@ -1,24 +1,38 @@
-/*
-* Copyright (C) 2019-2023 EverX. All Rights Reserved.
-*
-* Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
-* this file except in compliance with the License.
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific TON DEV software governing permissions and
-* limitations under the License.
-*/
+// Copyright (C) 2019-2023 EverX. All Rights Reserved.
+//
+// Licensed under the SOFTWARE EVALUATION License (the "License"); you may not
+// use this file except in compliance with the License.
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific TON DEV software governing permissions and
+// limitations under the License.
 
-use crate::{
-    fail, Result, base64_decode, base64_encode, ed25519_create_expanded_private_key, 
-    ed25519_create_private_key, ed25519_create_public_key, ed25519_expand_private_key, 
-    ed25519_generate_private_key, ed25519_verify, ed25519_sign, Ed25519ExpandedPrivateKey, 
-    Ed25519PrivateKey, sha256_digest_slices, x25519_shared_secret
-};
-use std::{convert::TryInto, fmt::{self, Debug, Display, Formatter}, sync::Arc};
-use super::bls::{BLS_PUBLIC_KEY_LEN, BLS_SECRET_KEY_LEN};
+use std::convert::TryInto;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::{self};
+use std::sync::Arc;
+
+use super::bls::BLS_PUBLIC_KEY_LEN;
+use super::bls::BLS_SECRET_KEY_LEN;
+use crate::base64_decode;
+use crate::base64_encode;
+use crate::ed25519_create_expanded_private_key;
+use crate::ed25519_create_private_key;
+use crate::ed25519_create_public_key;
+use crate::ed25519_expand_private_key;
+use crate::ed25519_generate_private_key;
+use crate::ed25519_sign;
+use crate::ed25519_verify;
+use crate::fail;
+use crate::sha256_digest_slices;
+use crate::x25519_shared_secret;
+use crate::Ed25519ExpandedPrivateKey;
+use crate::Ed25519PrivateKey;
+use crate::Result;
 
 pub trait KeyOption: Sync + Send + Debug {
     fn id(&self) -> &Arc<KeyId>;
@@ -39,11 +53,10 @@ pub struct Ed25519KeyOption {
 }
 
 impl Ed25519KeyOption {
-
-    pub const KEY_TYPE: i32 = 1209251014;
     pub const EXP_KEY_SIZE: usize = 64;
-    pub const PVT_KEY_SIZE: usize = 32;
+    pub const KEY_TYPE: i32 = 1209251014;
     pub const PUB_KEY_SIZE: usize = 32;
+    pub const PVT_KEY_SIZE: usize = 32;
 
     /// Create from Ed25519 expanded secret key raw data
     pub fn from_expanded_key(exp_key: &[u8; Self::EXP_KEY_SIZE]) -> Result<Arc<dyn KeyOption>> {
@@ -52,9 +65,9 @@ impl Ed25519KeyOption {
 
     /// Create from Ed25519 secret key raw data
     pub fn from_private_key(pvt_key: &[u8; Self::PVT_KEY_SIZE]) -> Result<Arc<dyn KeyOption>> {
-        Self::create_from_expanded_key(
-            ed25519_expand_private_key(&ed25519_create_private_key(pvt_key)?)?
-        )
+        Self::create_from_expanded_key(ed25519_expand_private_key(&ed25519_create_private_key(
+            pvt_key,
+        )?)?)
     }
 
     /// Create from Ed25519 secret key raw data and export JSON
@@ -80,10 +93,7 @@ impl Ed25519KeyOption {
                 }
                 None => fail!("No private key"),
             },
-            _ => fail!(
-                "Type-id {} is not supported for Ed25519 private key",
-                src.type_id
-            ),
+            _ => fail!("Type-id {} is not supported for Ed25519 private key", src.type_id),
         }
     }
 
@@ -112,17 +122,14 @@ impl Ed25519KeyOption {
                 }
                 None => fail!("No public key"),
             },
-            _ => fail!(
-                "Type-id {} is not supported for Ed25519 public key",
-                src.type_id
-            ),
+            _ => fail!("Type-id {} is not supported for Ed25519 public key", src.type_id),
         }
     }
 
     /// Generate new Ed25519 key
     pub fn generate() -> Result<Arc<dyn KeyOption>> {
         Self::create_from_expanded_key(
-            ed25519_expand_private_key(&ed25519_generate_private_key()?)?
+            ed25519_expand_private_key(&ed25519_generate_private_key()?)?,
         )
     }
 
@@ -131,9 +138,7 @@ impl Ed25519KeyOption {
         Self::create_from_private_key_with_json(ed25519_generate_private_key()?)
     }
 
-    fn create_from_expanded_key(
-        exp_key: Ed25519ExpandedPrivateKey
-    ) -> Result<Arc<dyn KeyOption>> {
+    fn create_from_expanded_key(exp_key: Ed25519ExpandedPrivateKey) -> Result<Arc<dyn KeyOption>> {
         let pub_key = ed25519_create_public_key(&exp_key)?.to_bytes();
         let exp_key = exp_key.to_bytes();
         let ret = Self {
@@ -145,7 +150,7 @@ impl Ed25519KeyOption {
     }
 
     fn create_from_private_key_with_json(
-        pvt_key: Ed25519PrivateKey
+        pvt_key: Ed25519PrivateKey,
     ) -> Result<(KeyOptionJson, Arc<dyn KeyOption>)> {
         let ret = Self::create_from_expanded_key(ed25519_expand_private_key(&pvt_key)?)?;
         let json = KeyOptionJson {
@@ -172,7 +177,6 @@ impl Ed25519KeyOption {
 }
 
 impl KeyOption for Ed25519KeyOption {
-
     /// Get key id
     fn id(&self) -> &Arc<KeyId> {
         &self.id
@@ -211,14 +215,13 @@ impl KeyOption for Ed25519KeyOption {
     fn export_key(&self) -> Result<&[u8]> {
         Ok(self.exp_key()?)
     }
-
 }
 
 #[derive(Debug)]
 pub struct BlsKeyOption {
     id: Arc<KeyId>,
     pub_key: [u8; BLS_PUBLIC_KEY_LEN],
-    pvt_key: Option<[u8; BLS_SECRET_KEY_LEN]>
+    pvt_key: Option<[u8; BLS_SECRET_KEY_LEN]>,
 }
 
 impl BlsKeyOption {
@@ -229,7 +232,7 @@ impl BlsKeyOption {
         let json = KeyOptionJson {
             type_id: Self::KEY_TYPE,
             pub_key: Some(base64::encode(&key.pub_key)),
-            pvt_key: key.pvt_key.map(|val| base64::encode(val))
+            pvt_key: key.pvt_key.map(|val| base64::encode(val)),
         };
 
         Ok((json, Arc::new(key)))
@@ -240,42 +243,28 @@ impl BlsKeyOption {
             Some(pub_key) => {
                 let pub_key = base64::decode(pub_key)?;
                 pub_key.as_slice().try_into()?
-            },
-            None => fail!("Bad public key")
+            }
+            None => fail!("Bad public key"),
         };
 
         let pvt_key: [u8; BLS_SECRET_KEY_LEN] = match &json.pvt_key {
             Some(pvt_key) => {
                 let pvt_key = base64::decode(pvt_key)?;
                 pvt_key.as_slice().try_into()?
-            },
-            None => fail!("Bad private key")
+            }
+            None => fail!("Bad private key"),
         };
 
-        Ok(Arc::new(Self {
-            id: Self::calc_id(&pub_key),
-             pub_key: pub_key,
-            pvt_key: Some(pvt_key)
-        }))
+        Ok(Arc::new(Self { id: Self::calc_id(&pub_key), pub_key, pvt_key: Some(pvt_key) }))
     }
 
     pub fn from_public_key(pub_key: [u8; BLS_PUBLIC_KEY_LEN]) -> Arc<dyn KeyOption> {
-        Arc::new(
-            Self {
-                id: Self::calc_id(&pub_key), 
-                pub_key: pub_key, 
-                pvt_key: None
-            }
-        )
+        Arc::new(Self { id: Self::calc_id(&pub_key), pub_key, pvt_key: None })
     }
 
     fn generate() -> Result<Self> {
         let (pub_key, pvt_key) = super::bls::gen_bls_key_pair()?;
-        Ok(Self {
-            id: Self::calc_id(&pub_key),
-            pub_key: pub_key,
-            pvt_key: Some(pvt_key)
-        })
+        Ok(Self { id: Self::calc_id(&pub_key), pub_key, pvt_key: Some(pvt_key) })
     }
 
     fn calc_id(pub_key: &[u8; BLS_PUBLIC_KEY_LEN]) -> Arc<KeyId> {
@@ -285,8 +274,8 @@ impl BlsKeyOption {
 
     fn pvt_key(&self) -> Result<&[u8; BLS_SECRET_KEY_LEN]> {
         match &self.pvt_key {
-            Some(pvt_key) => Ok(pvt_key), 
-            None => fail!("private bls key was not found!")
+            Some(pvt_key) => Ok(pvt_key),
+            None => fail!("private bls key was not found!"),
         }
     }
 }
@@ -296,7 +285,8 @@ impl KeyOption for BlsKeyOption {
     fn id(&self) -> &Arc<KeyId> {
         &self.id
     }
-    /// Get type id 
+
+    /// Get type id
     fn type_id(&self) -> i32 {
         Self::KEY_TYPE
     }
@@ -314,10 +304,7 @@ impl KeyOption for BlsKeyOption {
 
     /// Verify signature
     fn verify(&self, data: &[u8], signature: &[u8]) -> Result<()> {
-        let status = super::bls::verify(
-            signature.try_into()?, 
-            &data.to_vec(), &self.pub_key
-        )?;
+        let status = super::bls::verify(signature.try_into()?, &data.to_vec(), &self.pub_key)?;
 
         if !status {
             fail!("bad signature!");
@@ -330,14 +317,13 @@ impl KeyOption for BlsKeyOption {
     fn export_key(&self) -> Result<&[u8]> {
         match self.pvt_key.as_ref() {
             Some(pvt_key) => Ok(pvt_key),
-            None => fail!("pvt_key is None")
+            None => fail!("pvt_key is None"),
         }
     }
 
     fn shared_secret(&self, _other_pub_key: &[u8]) -> Result<[u8; 32]> {
         fail!("shared_secret not implemented for BlsKeyOption!")
     }
-
 }
 
 /// ADNL key ID (node ID)
@@ -348,6 +334,7 @@ impl KeyId {
     pub fn from_data(data: [u8; 32]) -> Arc<Self> {
         Arc::new(Self(data))
     }
+
     pub fn data(&self) -> &[u8; 32] {
         &self.0
     }

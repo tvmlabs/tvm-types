@@ -1,26 +1,33 @@
-/*
-* Copyright (C) 2019-2023 EverX. All Rights Reserved.
-*
-* Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
-* this file except in compliance with the License.
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific TON DEV software governing permissions and
-* limitations under the License.
-*/
+// Copyright (C) 2019-2023 EverX. All Rights Reserved.
+//
+// Licensed under the SOFTWARE EVALUATION License (the "License"); you may not
+// use this file except in compliance with the License.
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific TON DEV software governing permissions and
+// limitations under the License.
 
-use crate::{error, fail, Result};
-use aes_ctr::cipher::stream::{NewStreamCipher, SyncStreamCipher};
 use core::ops::Range;
-use crc::{Crc, CRC_32_ISCSI};
-use ed25519_dalek::{SecretKey, Signer, SigningKey, Verifier, VerifyingKey};
-use sha2::Digest;
 
+use aes_ctr::cipher::stream::NewStreamCipher;
+use aes_ctr::cipher::stream::SyncStreamCipher;
+use crc::Crc;
+use crc::CRC_32_ISCSI;
+use ed25519_dalek::SecretKey;
+use ed25519_dalek::Signer;
+use ed25519_dalek::SigningKey;
+use ed25519_dalek::Verifier;
+use ed25519_dalek::VerifyingKey;
 pub use ed25519_dalek::PUBLIC_KEY_LENGTH as ED25519_PUBLIC_KEY_LENGTH;
 pub use ed25519_dalek::SECRET_KEY_LENGTH as ED25519_SECRET_KEY_LENGTH;
 pub use ed25519_dalek::SIGNATURE_LENGTH as ED25519_SIGNATURE_LENGTH;
+use sha2::Digest;
+
+use crate::error;
+use crate::fail;
+use crate::Result;
 
 // AES-CTR --------------------------------------------------------------
 
@@ -89,13 +96,16 @@ impl Ed25519PrivateKey {
     pub fn to_bytes(&self) -> [u8; ED25519_SECRET_KEY_LENGTH] {
         self.inner
     }
+
     pub fn as_bytes(&self) -> &[u8; ED25519_SECRET_KEY_LENGTH] {
         &self.inner
     }
+
     pub fn sign(&self, data: &[u8]) -> [u8; ED25519_SIGNATURE_LENGTH] {
         let signing_key = SigningKey::from(&self.inner);
         signing_key.sign(data).to_bytes()
     }
+
     pub fn verifying_key(&self) -> [u8; ED25519_PUBLIC_KEY_LENGTH] {
         let signing_key = SigningKey::from(&self.inner);
         VerifyingKey::from(&signing_key).to_bytes()
@@ -110,55 +120,44 @@ impl Ed25519PublicKey {
     pub fn as_bytes(&self) -> &[u8; ED25519_PUBLIC_KEY_LENGTH] {
         self.inner.as_bytes()
     }
+
     pub fn to_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_LENGTH] {
         self.inner.to_bytes()
     }
+
     pub fn from_bytes(bytes: &[u8; ED25519_PUBLIC_KEY_LENGTH]) -> Result<Self> {
-        Ok(Self {
-            inner: VerifyingKey::from_bytes(bytes)?,
-        })
+        Ok(Self { inner: VerifyingKey::from_bytes(bytes)? })
     }
+
     pub fn verify(&self, data: &[u8], signature: &[u8; ED25519_SIGNATURE_LENGTH]) -> bool {
-        self.inner
-            .verify(data, &ed25519::Signature::from_bytes(signature))
-            .is_ok()
+        self.inner.verify(data, &ed25519::Signature::from_bytes(signature)).is_ok()
     }
 }
 
 pub fn ed25519_create_expanded_private_key(src: &[u8]) -> Result<Ed25519ExpandedPrivateKey> {
-    let ret = Ed25519ExpandedPrivateKey {
-        inner: src.try_into()?,
-    };
+    let ret = Ed25519ExpandedPrivateKey { inner: src.try_into()? };
     Ok(ret)
 }
 
 pub fn ed25519_create_private_key(src: &[u8]) -> Result<Ed25519PrivateKey> {
-    let ret = Ed25519PrivateKey {
-        inner: src.try_into()?,
-    };
+    let ret = Ed25519PrivateKey { inner: src.try_into()? };
     Ok(ret)
 }
 
 pub fn ed25519_create_public_key(src: &Ed25519ExpandedPrivateKey) -> Result<Ed25519PublicKey> {
     let exp_key = ed25519_dalek::hazmat::ExpandedSecretKey::from_bytes(&src.inner);
-    let ret = Ed25519PublicKey {
-        inner: VerifyingKey::from(&exp_key),
-    };
+    let ret = Ed25519PublicKey { inner: VerifyingKey::from(&exp_key) };
     Ok(ret)
 }
 
 pub fn ed25519_expand_private_key(src: &Ed25519PrivateKey) -> Result<Ed25519ExpandedPrivateKey> {
     let bytes = sha2::Sha512::default().chain_update(src.inner).finalize();
-    let ret = Ed25519ExpandedPrivateKey {
-        inner: bytes.into(),
-    };
+    let ret = Ed25519ExpandedPrivateKey { inner: bytes.into() };
     Ok(ret)
 }
 
 pub fn ed25519_generate_private_key() -> Result<Ed25519PrivateKey> {
-    let ret = Ed25519PrivateKey {
-        inner: SigningKey::generate(&mut rand::thread_rng()).to_bytes(),
-    };
+    let ret = Ed25519PrivateKey { inner: SigningKey::generate(&mut rand::thread_rng()).to_bytes() };
     Ok(ret)
 }
 
@@ -204,9 +203,7 @@ pub struct Sha256 {
 impl Sha256 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self {
-            inner: sha2::Sha256::new(),
-        }
+        Self { inner: sha2::Sha256::new() }
     }
 
     pub fn update(&mut self, data: impl AsRef<[u8]>) {
@@ -243,13 +240,13 @@ pub struct Crc32<'a> {
 impl<'a> Crc32<'a> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self {
-            hasher: CASTAGNOLI.digest(),
-        }
+        Self { hasher: CASTAGNOLI.digest() }
     }
+
     pub fn update(&mut self, data: impl AsRef<[u8]>) {
         self.hasher.update(data.as_ref())
     }
+
     pub fn finalize(self) -> u32 {
         self.hasher.finalize()
     }

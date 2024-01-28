@@ -1,15 +1,13 @@
-/*
-* Copyright (C) 2019-2023 TON Labs. All Rights Reserved.
-*
-* Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
-* this file except in compliance with the License.
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific TON DEV software governing permissions and
-* limitations under the License.
-*/
+// Copyright (C) 2019-2023 TON Labs. All Rights Reserved.
+//
+// Licensed under the SOFTWARE EVALUATION License (the "License"); you may not
+// use this file except in compliance with the License.
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific TON DEV software governing permissions and
+// limitations under the License.
 
 use std::convert::From;
 use std::fmt;
@@ -17,12 +15,19 @@ use std::fmt;
 use smallvec::SmallVec;
 pub(super) type SmallData = SmallVec<[u8; 128]>;
 
-use crate::cell::{
-    append_tag, find_tag, Cell, CellType, DataCell, LevelMask, SliceData, MAX_DATA_BITS,
-    MAX_SAFE_DEPTH,
-};
-use crate::types::{ExceptionCode, Result};
-use crate::{error, fail};
+use crate::cell::append_tag;
+use crate::cell::find_tag;
+use crate::cell::Cell;
+use crate::cell::CellType;
+use crate::cell::DataCell;
+use crate::cell::LevelMask;
+use crate::cell::SliceData;
+use crate::cell::MAX_DATA_BITS;
+use crate::cell::MAX_SAFE_DEPTH;
+use crate::error;
+use crate::fail;
+use crate::types::ExceptionCode;
+use crate::types::Result;
 
 const EXACT_CAPACITY: usize = 128;
 
@@ -38,6 +43,7 @@ impl BuilderData {
     pub const fn default() -> Self {
         Self::new()
     }
+
     pub const fn new() -> Self {
         BuilderData {
             data: SmallVec::new_const(),
@@ -47,10 +53,7 @@ impl BuilderData {
         }
     }
 
-    pub fn with_raw(
-        data: impl Into<SmallData>,
-        length_in_bits: usize,
-    ) -> Result<BuilderData> {
+    pub fn with_raw(data: impl Into<SmallData>, length_in_bits: usize) -> Result<BuilderData> {
         let mut data = data.into();
         if length_in_bits > data.len() * 8 {
             fail!(ExceptionCode::FatalError)
@@ -109,6 +112,7 @@ impl BuilderData {
     pub(super) fn into_bitstring(self) -> SliceData {
         SliceData::with_bitstring(self.data, self.length_in_bits)
     }
+
     /// use max_depth to limit depth
     pub fn finalize(mut self, max_depth: u16) -> Result<Cell> {
         let mut children_level_mask = LevelMask::with_level(0);
@@ -126,8 +130,7 @@ impl BuilderData {
                 LevelMask::with_mask(self.data[1])
             }
             CellType::LibraryReference => LevelMask::with_level(0),
-            CellType::MerkleProof | CellType::MerkleUpdate =>
-                children_level_mask.virtualize(1),
+            CellType::MerkleProof | CellType::MerkleUpdate => children_level_mask.virtualize(1),
             CellType::Big => fail!("Big cell creation by builder is prohibited"),
         };
         append_tag(&mut self.data, self.length_in_bits);

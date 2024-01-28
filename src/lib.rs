@@ -1,15 +1,13 @@
-/*
-* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
-*
-* Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
-* this file except in compliance with the License.
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific TON DEV software governing permissions and
-* limitations under the License.
-*/
+// Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
+//
+// Licensed under the SOFTWARE EVALUATION License (the "License"); you may not
+// use this file except in compliance with the License.
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific TON DEV software governing permissions and
+// limitations under the License.
 
 pub mod types;
 pub use self::types::*;
@@ -44,12 +42,15 @@ impl Mask for u8 {
     fn bit(&self, bits: Self) -> bool {
         (self & bits) == bits
     }
+
     fn mask(&self, mask: Self) -> u8 {
         self & mask
     }
+
     fn any(&self, bits: Self) -> bool {
         (self & bits) != 0
     }
+
     fn non(&self, bits: Self) -> bool {
         (self & bits) == 0
     }
@@ -65,9 +66,11 @@ impl GasConsumer for u64 {
     fn finalize_cell(&mut self, builder: BuilderData) -> Result<Cell> {
         builder.into_cell()
     }
+
     fn load_cell(&mut self, cell: Cell) -> Result<SliceData> {
         SliceData::load_cell(cell)
     }
+
     fn finalize_cell_and_load(&mut self, builder: BuilderData) -> Result<SliceData> {
         SliceData::load_builder(builder)
     }
