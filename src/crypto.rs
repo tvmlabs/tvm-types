@@ -225,7 +225,7 @@ pub struct BlsKeyOption {
 }
 
 impl BlsKeyOption {
-    pub const KEY_TYPE: i32 = 007;
+    pub const KEY_TYPE: i32 = 0o7;
 
     pub fn generate_with_json() -> Result<(KeyOptionJson, Arc<dyn KeyOption>)> {
         let key = Self::generate()?;
@@ -299,7 +299,7 @@ impl KeyOption for BlsKeyOption {
     /// Calculate simple signature
     fn sign(&self, data: &[u8]) -> Result<Vec<u8>> {
         let sign = super::bls::sign(self.pvt_key()?, data)?;
-        Ok(sign.try_into()?)
+        Ok(sign.into())
     }
 
     /// Verify signature

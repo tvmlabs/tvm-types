@@ -180,9 +180,9 @@ pub fn aggregate_bls_signatures(sig_bytes_with_nodes_info_vec: &[&[u8]]) -> Resu
     let bls_sigs_refs: Vec<&BlsSignature> = bls_sigs.iter().collect();
     let mut nodes_info_refs: Vec<&NodesInfo> = Vec::new();
     let mut sigs: Vec<Signature> = Vec::new();
-    for i in 0..bls_sigs_refs.len() {
-        nodes_info_refs.push(&bls_sigs_refs[i].nodes_info);
-        let sig = convert_signature_bytes_to_signature(&bls_sigs_refs[i].sig_bytes)?;
+    for it in &bls_sigs_refs {
+        nodes_info_refs.push(&it.nodes_info);
+        let sig = convert_signature_bytes_to_signature(&it.sig_bytes)?;
         println!("{:?}", &sig.to_bytes());
         // return this part to exclude zero sig
         // let res = sig.validate(true);
@@ -411,8 +411,8 @@ impl NodesInfo {
             fail!("Nodes info collection must have at least two elements!!")
         }
         let mut final_nodes_info = NodesInfo::merge(info_vec[0], info_vec[1])?;
-        for i in 2..info_vec.len() {
-            final_nodes_info = NodesInfo::merge(&final_nodes_info, info_vec[i])?;
+        for item in info_vec.iter().skip(2) {
+            final_nodes_info = NodesInfo::merge(&final_nodes_info, item)?;
         }
         Ok(final_nodes_info)
     }
