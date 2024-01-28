@@ -103,14 +103,14 @@ pub fn truncate_nodes_info_and_verify(
 pub fn aggregate_public_keys(
     bls_pks_bytes: &[&[u8; BLS_PUBLIC_KEY_LEN]],
 ) -> Result<[u8; BLS_PUBLIC_KEY_LEN]> {
-    if bls_pks_bytes.len() == 0 {
+    if bls_pks_bytes.is_empty() {
         fail!("Vector of public keys can not be empty!");
     }
     let mut pks: Vec<PublicKey> = Vec::new();
     for bls_pk in bls_pks_bytes {
         pks.push(convert_public_key_bytes_to_public_key(bls_pk)?);
     }
-    let pk_refs: Vec<&PublicKey> = pks.iter().map(|pk| pk).collect();
+    let pk_refs: Vec<&PublicKey> = pks.iter().collect();
     let agg = match AggregatePublicKey::aggregate(&pk_refs, true) {
         Ok(agg) => agg,
         Err(err) => fail!("aggregate failure: {:?}", err),
@@ -122,7 +122,7 @@ pub fn aggregate_public_keys_based_on_nodes_info(
     bls_pks_bytes: &[&[u8; BLS_PUBLIC_KEY_LEN]],
     nodes_info_bytes: &[u8],
 ) -> Result<[u8; BLS_PUBLIC_KEY_LEN]> {
-    if bls_pks_bytes.len() == 0 {
+    if bls_pks_bytes.is_empty() {
         fail!("Vector of public keys can not be empty!");
     }
     let nodes_info = NodesInfo::deserialize(nodes_info_bytes)?;
@@ -168,16 +168,16 @@ pub fn aggregate_two_bls_signatures(
 }
 
 pub fn aggregate_bls_signatures(sig_bytes_with_nodes_info_vec: &[&[u8]]) -> Result<Vec<u8>> {
-    if sig_bytes_with_nodes_info_vec.len() == 0 {
+    if sig_bytes_with_nodes_info_vec.is_empty() {
         fail!("Vector of signatures can not be empty!");
     }
     let mut bls_sigs: Vec<BlsSignature> = Vec::new();
     for bytes in sig_bytes_with_nodes_info_vec {
-        let agg_sig = BlsSignature::deserialize(&bytes)?;
+        let agg_sig = BlsSignature::deserialize(bytes)?;
         bls_sigs.push(agg_sig);
     }
 
-    let bls_sigs_refs: Vec<&BlsSignature> = bls_sigs.iter().map(|sig| sig).collect();
+    let bls_sigs_refs: Vec<&BlsSignature> = bls_sigs.iter().collect();
     let mut nodes_info_refs: Vec<&NodesInfo> = Vec::new();
     let mut sigs: Vec<Signature> = Vec::new();
     for i in 0..bls_sigs_refs.len() {
@@ -194,7 +194,7 @@ pub fn aggregate_bls_signatures(sig_bytes_with_nodes_info_vec: &[&[u8]]) -> Resu
 
     let new_nodes_info = NodesInfo::merge_multiple(&nodes_info_refs)?;
 
-    let sig_refs: Vec<&Signature> = sigs.iter().map(|sig| sig).collect();
+    let sig_refs: Vec<&Signature> = sigs.iter().collect();
 
     let agg = match AggregateSignature::aggregate(&sig_refs, true) {
         Ok(agg) => agg,
@@ -238,7 +238,7 @@ pub fn convert_public_key_bytes_to_public_key(
 }
 
 pub fn convert_signature_to_signature_bytes(sig: Signature) -> [u8; BLS_SIG_LEN] {
-    return sig.to_bytes();
+    sig.to_bytes()
 }
 
 // Keygen
@@ -304,7 +304,7 @@ impl BlsKeyPair {
     pub fn gen_bls_key_pair_based_on_key_material(
         ikm: &[u8; BLS_KEY_MATERIAL_LEN],
     ) -> Result<Self> {
-        let key_pair = BlsKeyPair::gen_key_pair_based_on_key_material(&ikm)?;
+        let key_pair = BlsKeyPair::gen_key_pair_based_on_key_material(ikm)?;
         Ok(BlsKeyPair::convert_key_pair_to_bls_key_pair(key_pair))
     }
 
@@ -332,7 +332,7 @@ impl BlsKeyPair {
     }
 
     fn convert_key_pair_to_bls_key_pair(key_pair: KeyPair) -> Self {
-        return BlsKeyPair { sk_bytes: key_pair.sk.to_bytes(), pk_bytes: key_pair.pk.to_bytes() };
+        BlsKeyPair { sk_bytes: key_pair.sk.to_bytes(), pk_bytes: key_pair.pk.to_bytes() }
     }
 }
 
@@ -362,7 +362,7 @@ impl NodesInfo {
         if total_num_of_nodes == 0 {
             fail!("Total number of nodes can not be zero!");
         }
-        if info.len() == 0 {
+        if info.is_empty() {
             fail!("Node info should not be empty!")
         }
         for (index, number_of_occurrence) in &info {
@@ -396,7 +396,7 @@ impl NodesInfo {
         for (index, number_of_occurrence) in &info2.map {
             new_info.insert(
                 *index,
-                if new_info.contains_key(&index) {
+                if new_info.contains_key(index) {
                     new_info[index] + *number_of_occurrence
                 } else {
                     *number_of_occurrence
@@ -410,9 +410,9 @@ impl NodesInfo {
         if info_vec.len() <= 1 {
             fail!("Nodes info collection must have at least two elements!!")
         }
-        let mut final_nodes_info = NodesInfo::merge(&info_vec[0], &info_vec[1])?;
+        let mut final_nodes_info = NodesInfo::merge(info_vec[0], info_vec[1])?;
         for i in 2..info_vec.len() {
-            final_nodes_info = NodesInfo::merge(&final_nodes_info, &info_vec[i])?;
+            final_nodes_info = NodesInfo::merge(&final_nodes_info, info_vec[i])?;
         }
         Ok(final_nodes_info)
     }
@@ -496,9 +496,9 @@ pub fn create_random_nodes_info(total_num_of_nodes: u16, attempts: u16) -> Nodes
         let nodes_info = NodesInfo::create_node_info(total_num_of_nodes, *ind).unwrap();
         node_info_vec.push(nodes_info)
     }
-    let node_info_vec_refs: Vec<&NodesInfo> = node_info_vec.iter().map(|info| info).collect();
-    let info = NodesInfo::merge_multiple(&node_info_vec_refs).unwrap();
-    info
+    let node_info_vec_refs: Vec<&NodesInfo> = node_info_vec.iter().collect();
+    
+    NodesInfo::merge_multiple(&node_info_vec_refs).unwrap()
 }
 
 // Signing
@@ -516,7 +516,7 @@ impl BlsSignature {
         let mut vec = Vec::new();
         vec.extend_from_slice(&self.sig_bytes);
         let nodes_info_bytes = &self.nodes_info.serialize();
-        vec.extend_from_slice(&nodes_info_bytes);
+        vec.extend_from_slice(nodes_info_bytes);
         vec
     }
 
@@ -537,7 +537,7 @@ impl BlsSignature {
         sk_bytes: &[u8; BLS_SECRET_KEY_LEN],
         msg: &[u8],
     ) -> Result<[u8; BLS_SIG_LEN]> {
-        if msg.len() == 0 {
+        if msg.is_empty() {
             fail!("Msg to sign can not be empty!")
         }
         let sk = convert_secret_key_bytes_to_secret_key(sk_bytes)?;
@@ -550,7 +550,7 @@ impl BlsSignature {
         msg: &[u8],
         pk_bytes: &[u8; BLS_PUBLIC_KEY_LEN],
     ) -> Result<bool> {
-        if msg.len() == 0 {
+        if msg.is_empty() {
             fail!("Msg to sign can not be empty!")
         }
         let sig = convert_signature_bytes_to_signature(sig_bytes)?;

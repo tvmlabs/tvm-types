@@ -332,7 +332,7 @@ impl HashmapType for PfxHashmapE {
     }
 
     fn make_leaf(key: &SliceData, bit_len: usize, value: &SliceData) -> Result<BuilderData> {
-        let mut builder = hm_label(&key, bit_len)?;
+        let mut builder = hm_label(key, bit_len)?;
         builder.checked_append_references_and_data(value)?;
         builder.append_bit_zero()?;
         Ok(builder)

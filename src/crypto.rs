@@ -231,8 +231,8 @@ impl BlsKeyOption {
         let key = Self::generate()?;
         let json = KeyOptionJson {
             type_id: Self::KEY_TYPE,
-            pub_key: Some(base64::encode(&key.pub_key)),
-            pvt_key: key.pvt_key.map(|val| base64::encode(val)),
+            pub_key: Some(base64::encode(key.pub_key)),
+            pvt_key: key.pvt_key.map(base64::encode),
         };
 
         Ok((json, Arc::new(key)))
@@ -298,13 +298,13 @@ impl KeyOption for BlsKeyOption {
 
     /// Calculate simple signature
     fn sign(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let sign = super::bls::sign(self.pvt_key()?, &data.to_vec())?;
+        let sign = super::bls::sign(self.pvt_key()?, data)?;
         Ok(sign.try_into()?)
     }
 
     /// Verify signature
     fn verify(&self, data: &[u8], signature: &[u8]) -> Result<()> {
-        let status = super::bls::verify(signature.try_into()?, &data.to_vec(), &self.pub_key)?;
+        let status = super::bls::verify(signature.try_into()?, data, &self.pub_key)?;
 
         if !status {
             fail!("bad signature!");
