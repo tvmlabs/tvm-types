@@ -15,29 +15,26 @@ use crate::{error, fail, Result};
 use aes_ctr::cipher::stream::{NewStreamCipher, SyncStreamCipher};
 use core::ops::Range;
 use crc::{Crc, CRC_32_ISCSI};
-use ed25519_dalek::{SecretKey, Verifier, VerifyingKey, SigningKey, Signer};
+use ed25519_dalek::{SecretKey, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::Digest;
 
-pub use ed25519_dalek::SIGNATURE_LENGTH as ED25519_SIGNATURE_LENGTH;
-pub use ed25519_dalek::SECRET_KEY_LENGTH as ED25519_SECRET_KEY_LENGTH;
 pub use ed25519_dalek::PUBLIC_KEY_LENGTH as ED25519_PUBLIC_KEY_LENGTH;
+pub use ed25519_dalek::SECRET_KEY_LENGTH as ED25519_SECRET_KEY_LENGTH;
+pub use ed25519_dalek::SIGNATURE_LENGTH as ED25519_SIGNATURE_LENGTH;
 
 // AES-CTR --------------------------------------------------------------
 
 pub struct AesCtr {
-    inner: aes_ctr::Aes256Ctr
+    inner: aes_ctr::Aes256Ctr,
 }
 
 impl AesCtr {
-
     pub fn with_params(key: &[u8], ctr: &[u8]) -> Result<Self> {
         let aes_ctr = aes_ctr::Aes256Ctr::new(
             aes_ctr::cipher::generic_array::GenericArray::from_slice(key),
             aes_ctr::cipher::generic_array::GenericArray::from_slice(ctr),
         );
-        let ret = Self { 
-            inner: aes_ctr 
-        };
+        let ret = Self { inner: aes_ctr };
         Ok(ret)
     }
 
@@ -45,10 +42,9 @@ impl AesCtr {
         self.inner.apply_keystream(&mut buf[range]);
         Ok(())
     }
-
 }
 
-// Base-64 -------------------------------------------------------------- 
+// Base-64 --------------------------------------------------------------
 
 pub fn base64_decode(input: impl AsRef<[u8]>) -> Result<Vec<u8>> {
     Ok(base64::decode(input)?)
@@ -76,7 +72,7 @@ pub fn base64_encode_url_safe(input: impl AsRef<[u8]>) -> String {
 pub struct Ed25519ExpandedPrivateKey {
     // Currently, ed25519_dalek::hazmat::ExpandedSecretKey can't be
     // converted back to bytes, so we have to have a raw slice here
-    inner: [u8; 64]
+    inner: [u8; 64],
 }
 
 impl Ed25519ExpandedPrivateKey {
@@ -86,7 +82,7 @@ impl Ed25519ExpandedPrivateKey {
 }
 
 pub struct Ed25519PrivateKey {
-    inner: SecretKey
+    inner: SecretKey,
 }
 
 impl Ed25519PrivateKey {
@@ -107,7 +103,7 @@ impl Ed25519PrivateKey {
 }
 
 pub struct Ed25519PublicKey {
-    inner: VerifyingKey
+    inner: VerifyingKey,
 }
 
 impl Ed25519PublicKey {
@@ -118,23 +114,27 @@ impl Ed25519PublicKey {
         self.inner.to_bytes()
     }
     pub fn from_bytes(bytes: &[u8; ED25519_PUBLIC_KEY_LENGTH]) -> Result<Self> {
-        Ok(Self { inner: VerifyingKey::from_bytes(bytes)? })
+        Ok(Self {
+            inner: VerifyingKey::from_bytes(bytes)?,
+        })
     }
     pub fn verify(&self, data: &[u8], signature: &[u8; ED25519_SIGNATURE_LENGTH]) -> bool {
-        self.inner.verify(data, &ed25519::Signature::from_bytes(signature)).is_ok()
+        self.inner
+            .verify(data, &ed25519::Signature::from_bytes(signature))
+            .is_ok()
     }
 }
 
 pub fn ed25519_create_expanded_private_key(src: &[u8]) -> Result<Ed25519ExpandedPrivateKey> {
     let ret = Ed25519ExpandedPrivateKey {
-        inner: src.try_into()?
+        inner: src.try_into()?,
     };
     Ok(ret)
 }
 
 pub fn ed25519_create_private_key(src: &[u8]) -> Result<Ed25519PrivateKey> {
     let ret = Ed25519PrivateKey {
-        inner: src.try_into()?
+        inner: src.try_into()?,
     };
     Ok(ret)
 }
@@ -142,7 +142,7 @@ pub fn ed25519_create_private_key(src: &[u8]) -> Result<Ed25519PrivateKey> {
 pub fn ed25519_create_public_key(src: &Ed25519ExpandedPrivateKey) -> Result<Ed25519PublicKey> {
     let exp_key = ed25519_dalek::hazmat::ExpandedSecretKey::from_bytes(&src.inner);
     let ret = Ed25519PublicKey {
-        inner: VerifyingKey::from(&exp_key)
+        inner: VerifyingKey::from(&exp_key),
     };
     Ok(ret)
 }
@@ -150,28 +150,27 @@ pub fn ed25519_create_public_key(src: &Ed25519ExpandedPrivateKey) -> Result<Ed25
 pub fn ed25519_expand_private_key(src: &Ed25519PrivateKey) -> Result<Ed25519ExpandedPrivateKey> {
     let bytes = sha2::Sha512::default().chain_update(src.inner).finalize();
     let ret = Ed25519ExpandedPrivateKey {
-        inner: bytes.into()
+        inner: bytes.into(),
     };
     Ok(ret)
 }
 
 pub fn ed25519_generate_private_key() -> Result<Ed25519PrivateKey> {
     let ret = Ed25519PrivateKey {
-        inner: SigningKey::generate(&mut rand::thread_rng()).to_bytes()
+        inner: SigningKey::generate(&mut rand::thread_rng()).to_bytes(),
     };
     Ok(ret)
 }
 
-pub fn ed25519_sign_with_secret(secret_key: &[u8], data: &[u8]) -> Result<[u8; ED25519_SIGNATURE_LENGTH]> {
+pub fn ed25519_sign_with_secret(
+    secret_key: &[u8],
+    data: &[u8],
+) -> Result<[u8; ED25519_SIGNATURE_LENGTH]> {
     let signing_key = SigningKey::from_bytes(secret_key.try_into()?);
     Ok(signing_key.sign(data).to_bytes())
 }
 
-pub fn ed25519_sign(
-    exp_pvt_key: &[u8], 
-    pub_key: Option<&[u8]>, 
-    data: &[u8]
-) -> Result<Vec<u8>> {
+pub fn ed25519_sign(exp_pvt_key: &[u8], pub_key: Option<&[u8]>, data: &[u8]) -> Result<Vec<u8>> {
     let exp_key = ed25519_dalek::hazmat::ExpandedSecretKey::from_bytes(exp_pvt_key.try_into()?);
     let pub_key = if let Some(pub_key) = pub_key {
         VerifyingKey::from_bytes(pub_key.try_into()?)?
@@ -199,15 +198,14 @@ pub fn x25519_shared_secret(exp_pvt_key: &[u8], other_pub_key: &[u8]) -> Result<
 // SHA-2 ----------------------------------------------------------------
 
 pub struct Sha256 {
-    inner: sha2::Sha256
+    inner: sha2::Sha256,
 }
 
 impl Sha256 {
-
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            inner: sha2::Sha256::new()
+            inner: sha2::Sha256::new(),
         }
     }
 
@@ -218,7 +216,6 @@ impl Sha256 {
     pub fn finalize(self) -> [u8; 32] {
         self.inner.finalize().into()
     }
-
 }
 
 pub fn sha256_digest(data: impl AsRef<[u8]>) -> [u8; 32] {
@@ -240,14 +237,14 @@ pub fn sha512_digest(data: impl AsRef<[u8]>) -> [u8; 64] {
 const CASTAGNOLI: Crc<u32> = Crc::<u32>::new(&CRC_32_ISCSI);
 
 pub struct Crc32<'a> {
-    hasher: crc::Digest<'a, u32>
+    hasher: crc::Digest<'a, u32>,
 }
 
 impl<'a> Crc32<'a> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            hasher: CASTAGNOLI.digest()
+            hasher: CASTAGNOLI.digest(),
         }
     }
     pub fn update(&mut self, data: impl AsRef<[u8]>) {
