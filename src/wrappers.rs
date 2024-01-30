@@ -13,6 +13,9 @@ use core::ops::Range;
 
 use aes_ctr::cipher::stream::NewStreamCipher;
 use aes_ctr::cipher::stream::SyncStreamCipher;
+use base64::engine::general_purpose::STANDARD;
+use base64::engine::general_purpose::URL_SAFE;
+use base64::Engine;
 use crc::Crc;
 use crc::CRC_32_ISCSI;
 use ed25519_dalek::SecretKey;
@@ -54,12 +57,11 @@ impl AesCtr {
 // Base-64 --------------------------------------------------------------
 
 pub fn base64_decode(input: impl AsRef<[u8]>) -> Result<Vec<u8>> {
-    Ok(base64::decode(input)?)
+    STANDARD.decode(input).map_err(Into::into)
 }
 
 pub fn base64_decode_to_slice(input: impl AsRef<[u8]>, output: &mut [u8]) -> Result<()> {
-    let config = base64::STANDARD;
-    let result = base64::decode_config_slice(input, config, output)?;
+    let result = STANDARD.decode_slice(input, output)?;
     if output.len() != result {
         fail!("not enough bytes to decode only {}", result)
     }
@@ -67,11 +69,11 @@ pub fn base64_decode_to_slice(input: impl AsRef<[u8]>, output: &mut [u8]) -> Res
 }
 
 pub fn base64_encode(input: impl AsRef<[u8]>) -> String {
-    base64::encode(input)
+    STANDARD.encode(input)
 }
 
 pub fn base64_encode_url_safe(input: impl AsRef<[u8]>) -> String {
-    base64::encode_config(input, base64::URL_SAFE)
+    URL_SAFE.encode(input)
 }
 
 // Ed25519 --------------------------------------------------------------

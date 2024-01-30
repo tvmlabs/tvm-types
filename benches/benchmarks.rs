@@ -87,7 +87,7 @@ fn r(hex: &str) -> Cell {
 fn load_plan(filename: &str) -> Result<Plan> {
     let mut plan = Plan::new();
     for (lineno, line) in std::fs::read_to_string(filename)?.lines().enumerate() {
-        let fields = line.split(" ").collect::<Vec<_>>();
+        let fields = line.split(' ').collect::<Vec<_>>();
         let id = fields[0].parse::<usize>()?;
         use OperationType::*;
         let typ = match fields[1] {
