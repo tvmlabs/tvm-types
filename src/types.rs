@@ -17,36 +17,35 @@ use std::fmt::UpperHex;
 use std::str::FromStr;
 use std::str::{self};
 
+pub use anyhow::Result;
 use num::FromPrimitive;
 use smallvec::SmallVec;
+pub use thiserror::Error;
 
 use crate::base64_decode_to_slice;
 use crate::cell::BuilderData;
 use crate::cell::SliceData;
 use crate::sha256_digest;
 
-pub type Error = failure::Error;
-pub type Result<T> = std::result::Result<T, Error>;
-pub type Failure = Option<Error>;
 pub type Status = Result<()>;
 
 #[macro_export]
 macro_rules! error {
     ($error:literal) => {
-        failure::err_msg(format!("{} {}:{}", $error, file!(), line!()))
+        anyhow::anyhow!("{} {}:{}", $error, file!(), line!())
     };
     ($error:expr) => {
-        failure::Error::from($error)
+        anyhow::Error::from($error)
     };
     ($fmt:expr, $($arg:tt)+) => {
-        failure::err_msg(format!("{} {}:{}", format!($fmt, $($arg)*), file!(), line!()))
+        anyhow::anyhow!("{} {}:{}", format!($fmt, $($arg)*), file!(), line!())
     };
 }
 
 #[macro_export]
 macro_rules! fail {
     ($error:literal) => {
-        return Err(failure::err_msg(format!("{} {}:{}", $error, file!(), line!())))
+        return Err(anyhow::anyhow!("{} {}:{}", $error, file!(), line!()))
     };
     // uncomment to explicit panic for any ExceptionCode
     // (ExceptionCode::CellUnderflow) => {
@@ -56,7 +55,7 @@ macro_rules! fail {
         return Err(error!($error))
     };
     ($fmt:expr, $($arg:tt)*) => {
-        return Err(failure::err_msg(format!("{} {}:{}", format!($fmt, $($arg)*), file!(), line!())))
+        return Err(anyhow::anyhow!("{} {}:{}", format!($fmt, $($arg)*), file!(), line!()))
     };
 }
 
@@ -218,7 +217,7 @@ impl From<Vec<u8>> for UInt256 {
 }
 
 impl FromStr for UInt256 {
-    type Err = Error;
+    type Err = anyhow::Error;
 
     fn from_str(value: &str) -> Result<Self> {
         let mut result = Self::default();
@@ -301,7 +300,7 @@ impl From<&UInt256> for AccountId {
 }
 
 impl FromStr for AccountId {
-    type Err = Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
         let uint: UInt256 = FromStr::from_str(s)?;
@@ -311,41 +310,41 @@ impl FromStr for AccountId {
 
 // Exceptions *****************************************************************
 
-#[derive(Clone, Copy, Debug, num_derive::FromPrimitive, PartialEq, Eq, failure::Fail)]
+#[derive(Clone, Copy, Debug, num_derive::FromPrimitive, PartialEq, Eq, Error)]
 pub enum ExceptionCode {
-    #[fail(display = "normal termination")]
+    #[error("normal termination")]
     NormalTermination = 0,
-    #[fail(display = "alternative termination")]
+    #[error("alternative termination")]
     AlternativeTermination = 1,
-    #[fail(display = "stack underflow")]
+    #[error("stack underflow")]
     StackUnderflow = 2,
-    #[fail(display = "stack overflow")]
+    #[error("stack overflow")]
     StackOverflow = 3,
-    #[fail(display = "integer overflow")]
+    #[error("integer overflow")]
     IntegerOverflow = 4,
-    #[fail(display = "range check error")]
+    #[error("range check error")]
     RangeCheckError = 5,
-    #[fail(display = "invalid opcode")]
+    #[error("invalid opcode")]
     InvalidOpcode = 6,
-    #[fail(display = "type check error")]
+    #[error("type check error")]
     TypeCheckError = 7,
-    #[fail(display = "cell overflow")]
+    #[error("cell overflow")]
     CellOverflow = 8,
-    #[fail(display = "cell underflow")]
+    #[error("cell underflow")]
     CellUnderflow = 9,
-    #[fail(display = "dictionaty error")]
+    #[error("dictionaty error")]
     DictionaryError = 10,
-    #[fail(display = "unknown error")]
+    #[error("unknown error")]
     UnknownError = 11,
-    #[fail(display = "fatal error")]
+    #[error("fatal error")]
     FatalError = 12,
-    #[fail(display = "out of gas")]
+    #[error("out of gas")]
     OutOfGas = 13,
-    #[fail(display = "illegal instruction")]
+    #[error("illegal instruction")]
     IllegalInstruction = 14,
-    #[fail(display = "pruned cell")]
+    #[error("pruned cell")]
     PrunedCellAccess = 15,
-    #[fail(display = "big cell")]
+    #[error("big cell")]
     BigCellAccess = 16,
 }
 

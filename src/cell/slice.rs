@@ -492,7 +492,7 @@ impl SliceData {
     }
 
     pub fn get_next_bit_int(&mut self) -> Result<usize> {
-        Ok(self.get_next_bit_opt().ok_or(ExceptionCode::CellUnderflow)?)
+        self.get_next_bit_opt().ok_or_else(|| ExceptionCode::CellUnderflow.into())
     }
 
     pub fn get_next_bit_opt(&mut self) -> Option<usize> {
@@ -879,7 +879,7 @@ impl fmt::Debug for SliceData {
 #[rustfmt::skip]
 impl fmt::Display for SliceData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "data: {}..{}, references: {}..{}, data slice:{}", 
+        write!(f, "data: {}..{}, references: {}..{}, data slice:{}",
             self.data_window.start,
             self.data_window.end,
             self.references_window.start,
